@@ -1,0 +1,116 @@
+= rules_docker Demonstration
+:Author:    Oliver Eikemeier
+:Email:     <eikemeier@fillmore-labs.com>
+:Date:      2022-01
+:Revision:  v0.1
+:toc: macro
+
+== Purpose
+
+Demonstrates problems building with a Java container with
+https://github.com/bazelbuild/rules_docker[`rules_docker`].
+
+== Preparations
+
+https://github.com/bazelbuild/bazelisk#installation[Install bazelisk].
+
+== Running
+
+With `RULES_DOCKER_VERSION = "0.23.0"` in link:WORKSPACE[WORKSPACE] run
+
+[source,shell]
+bazel build --toolchain_resolution_debug=@bazel_tools//tools/cpp:toolchain_type \
+  //src/main/java/com/example/hello_world:hello_world_image
+
+On macOS we get the following result:
+
+```
+[...]
+INFO: ToolchainResolution:     Type @bazel_tools//tools/cpp:toolchain_type: target platform @io_bazel_rules_docker//platforms:image_transition: Rejected toolchain @local_config_cc//:cc-compiler-darwin_x86_64; mismatching values: osx
+[...]
+INFO: ToolchainResolution:   Type @bazel_tools//tools/cpp:toolchain_type: target platform @io_bazel_rules_docker//platforms:image_transition: No toolchains found.
+ERROR: [...]/java-container/src/main/java/com/example/hello_world/BUILD:16:11: While resolving toolchains for target //src/main/java/com/example/hello_world:hello_world_image.binary: No matching toolchains found for types @bazel_tools//tools/cpp:toolchain_type. [...]
+ERROR: Analysis of target '//src/main/java/com/example/hello_world:hello_world_image' failed; build aborted:
+INFO: Elapsed time: 1.256s
+INFO: 0 processes.
+FAILED: Build did NOT complete successfully (35 packages loaded, 375 targets configured)
+```
+
+It works on Linux, since target and host are the same platform:
+
+```
+[...]
+INFO: ToolchainResolution:   Type @bazel_tools//tools/cpp:toolchain_type: target platform @io_bazel_rules_docker//platforms:image_transition: execution @local_config_platform//:host: Selected toolchain @local_config_cc//:cc-compiler-k8
+INFO: ToolchainResolution: Target platform @io_bazel_rules_docker//platforms:image_transition: Selected execution platform @local_config_platform//:host, type @bazel_tools//tools/cpp:toolchain_type -> toolchain @local_config_cc//:cc-compiler-k8
+[...]
+INFO: ToolchainResolution:   Type @bazel_tools//tools/cpp:toolchain_type: target platform @local_config_platform//:host: execution @local_config_platform//:host: Selected toolchain @local_config_cc//:cc-compiler-k8
+INFO: ToolchainResolution: Target platform @local_config_platform//:host: Selected execution platform @local_config_platform//:host, type @bazel_tools//tools/cpp:toolchain_type -> toolchain @local_config_cc//:cc-compiler-k8, type @bazel_tools//tools/python:toolchain_type -> toolchain @bazel_tools//tools/python:_autodetecting_py_runtime_pair
+[...]
+INFO: ToolchainResolution:   Type @bazel_tools//tools/cpp:toolchain_type: target platform @local_config_platform//:host: execution @local_config_platform//:host: Selected toolchain @local_config_cc//:cc-compiler-k8
+INFO: ToolchainResolution: Target platform @local_config_platform//:host: Selected execution platform @local_config_platform//:host, type @bazel_tools//tools/cpp:toolchain_type -> toolchain @local_config_cc//:cc-compiler-k8, type @bazel_tools//tools/python:toolchain_type -> toolchain @bazel_tools//tools/python:_autodetecting_py_runtime_pair
+INFO: ToolchainResolution: Target platform @local_config_platform//:host: Selected execution platform @local_config_platform//:host, type @bazel_tools//tools/cpp:toolchain_type -> toolchain @local_config_cc//:cc-compiler-k8
+INFO: ToolchainResolution: Target platform @local_config_platform//:host: Selected execution platform @local_config_platform//:host, type @bazel_tools//tools/cpp:toolchain_type -> toolchain @local_config_cc//:cc-compiler-k8
+INFO: Analyzed target //src/main/java/com/example/hello_world:hello_world_image (63 packages loaded, 7708 targets configured).
+INFO: Found 1 target...
+Target //src/main/java/com/example/hello_world:hello_world_image up-to-date:
+  bazel-out/k8-fastbuild-ST-4a519fd6d3e4/bin/src/main/java/com/example/hello_world/hello_world_image-layer.tar
+INFO: Elapsed time: 12.692s, Critical Path: 2.93s
+INFO: 63 processes: 19 internal, 42 linux-sandbox, 2 worker.
+INFO: Build completed successfully, 63 total actions
+
+```
+
+== Analysis
+
+Using `RULES_DOCKER_VERSION = "0.22.0"` in link:WORKSPACE[WORKSPACE] we get
+
+[source,shell]
+bazel build --toolchain_resolution_debug=@bazel_tools//tools/cpp:toolchain_type \
+  //src/main/java/com/example/hello_world:hello_world_image
+
+```
+[...]
+INFO: ToolchainResolution:   Type @bazel_tools//tools/cpp:toolchain_type: target platform @local_config_platform//:host: execution @local_config_platform//:host: Selected toolchain @local_config_cc//:cc-compiler-darwin_x86_64
+[...]
+INFO: ToolchainResolution: Target platform @local_config_platform//:host: Selected execution platform @local_config_platform//:host, type @bazel_tools//tools/cpp:toolchain_type -> toolchain @local_config_cc//:cc-compiler-darwin_x86_64
+[...]
+INFO: ToolchainResolution:   Type @bazel_tools//tools/cpp:toolchain_type: target platform @local_config_platform//:host: execution @local_config_platform//:host: Selected toolchain @local_config_cc//:cc-compiler-darwin_x86_64
+[...]
+INFO: ToolchainResolution: Target platform @local_config_platform//:host: Selected execution platform @local_config_platform//:host, type @bazel_tools//tools/cpp:toolchain_type -> toolchain @local_config_cc//:cc-compiler-darwin_x86_64, type @bazel_tools//tools/python:toolchain_type -> toolchain @bazel_tools//tools/python:_autodetecting_py_runtime_pair
+[...]
+INFO: ToolchainResolution:   Type @bazel_tools//tools/cpp:toolchain_type: target platform @local_config_platform//:host: execution @local_config_platform//:host: Selected toolchain @local_config_cc//:cc-compiler-darwin_x86_64
+[...]
+INFO: ToolchainResolution: Target platform @local_config_platform//:host: Selected execution platform @local_config_platform//:host, type @bazel_tools//tools/cpp:toolchain_type -> toolchain @local_config_cc//:cc-compiler-darwin_x86_64, type @bazel_tools//tools/python:toolchain_type -> toolchain @bazel_tools//tools/python:_autodetecting_py_runtime_pair
+INFO: ToolchainResolution: Target platform @local_config_platform//:host: Selected execution platform @local_config_platform//:host, type @bazel_tools//tools/cpp:toolchain_type -> toolchain @local_config_cc//:cc-compiler-darwin_x86_64
+INFO: ToolchainResolution: Target platform @local_config_platform//:host: Selected execution platform @local_config_platform//:host, type @bazel_tools//tools/cpp:toolchain_type -> toolchain @local_config_cc//:cc-compiler-darwin_x86_64
+INFO: Analyzed target //src/main/java/com/example/hello_world:hello_world_image (76 packages loaded, 7936 targets configured).
+INFO: Found 1 target...
+Target //src/main/java/com/example/hello_world:hello_world_image up-to-date:
+bazel-bin/src/main/java/com/example/hello_world/hello_world_image-layer.tar
+INFO: Elapsed time: 7.199s, Critical Path: 0.02s
+INFO: 1 process: 1 internal.
+INFO: Build completed successfully, 1 total action
+```
+
+On Linux:
+
+```
+[...]
+INFO: ToolchainResolution:   Type @bazel_tools//tools/cpp:toolchain_type: target platform @local_config_platform//:host: execution @local_config_platform//:host: Selected toolchain @local_config_cc//:cc-compiler-k8
+INFO: ToolchainResolution: Target platform @local_config_platform//:host: Selected execution platform @local_config_platform//:host, type @bazel_tools//tools/cpp:toolchain_type -> toolchain @local_config_cc//:cc-compiler-k8
+[...]
+INFO: ToolchainResolution:   Type @bazel_tools//tools/cpp:toolchain_type: target platform @local_config_platform//:host: execution @local_config_platform//:host: Selected toolchain @local_config_cc//:cc-compiler-k8
+INFO: ToolchainResolution: Target platform @local_config_platform//:host: Selected execution platform @local_config_platform//:host, type @bazel_tools//tools/cpp:toolchain_type -> toolchain @local_config_cc//:cc-compiler-k8, type @bazel_tools//tools/python:toolchain_type -> toolchain @bazel_tools//tools/python:_autodetecting_py_runtime_pair
+[...]
+INFO: ToolchainResolution:   Type @bazel_tools//tools/cpp:toolchain_type: target platform @local_config_platform//:host: execution @local_config_platform//:host: Selected toolchain @local_config_cc//:cc-compiler-k8
+INFO: ToolchainResolution: Target platform @local_config_platform//:host: Selected execution platform @local_config_platform//:host, type @bazel_tools//tools/cpp:toolchain_type -> toolchain @local_config_cc//:cc-compiler-k8, type @bazel_tools//tools/python:toolchain_type -> toolchain @bazel_tools//tools/python:_autodetecting_py_runtime_pair
+INFO: ToolchainResolution: Target platform @local_config_platform//:host: Selected execution platform @local_config_platform//:host, type @bazel_tools//tools/cpp:toolchain_type -> toolchain @local_config_cc//:cc-compiler-k8
+INFO: ToolchainResolution: Target platform @local_config_platform//:host: Selected execution platform @local_config_platform//:host, type @bazel_tools//tools/cpp:toolchain_type -> toolchain @local_config_cc//:cc-compiler-k8
+INFO: Analyzed target //src/main/java/com/example/hello_world:hello_world_image (110 packages loaded, 7705 targets configured).
+INFO: Found 1 target...
+Target //src/main/java/com/example/hello_world:hello_world_image up-to-date:
+  bazel-bin/src/main/java/com/example/hello_world/hello_world_image-layer.tar
+INFO: Elapsed time: 4.125s, Critical Path: 2.96s
+INFO: 63 processes: 19 internal, 42 linux-sandbox, 2 worker.
+INFO: Build completed successfully, 63 total actions
+```
